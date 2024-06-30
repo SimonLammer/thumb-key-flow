@@ -36,7 +36,7 @@
       var word_length = 2;
       var goal = " ";
       var start_time = null;
-      var stats = {};
+      var stats = {"sequence":[]};
 
       function randomElement(array) {
         return array[Math.floor(Math.random() * array.length)];
@@ -46,16 +46,15 @@
         var solved = txt_in.value.endsWith(goal);
         if (start_time != null) {
           var time_delay = new Date() - start_time;
-          s = stats[goal]
+          s = stats[goal];
           if (s == undefined) {
-            s = []
+            s = [];
           }
           if (!solved) {
             time_delay = -time_delay;
           }
           s.push(time_delay);
           stats[goal] = s;
-          p_stats.innerText = (new Date()).toISOString() + "\n" + JSON.stringify(stats);
         }
         if (solved) {
           goal = "";
@@ -63,8 +62,10 @@
             goal += randomElement(characters);
           }
           out.innerText = goal;
+          stats["sequence"].push(goal);
           txt_in.value = "";
         }
+        p_stats.innerText = (new Date()).toISOString() + "\n" + JSON.stringify(stats);
         start_time = new Date();
       }
       txt_in.addEventListener("input", input);
