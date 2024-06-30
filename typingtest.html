@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Please do not look at this code, it is truly terrible (but gets the job done) -->
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Typing test</title>
+    <style type="text/css">
+      #out {
+        width: 100%;
+        height: 100%;
+        font-size: 10em;
+        margin: 0;
+      }
+      #in {
+        width: 100%;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <p id="out">
+        hit space to start
+      <p>
+    </div>
+    <input type="text" id="in"/>
+    <p id="stats">
+      start typing to get stats
+    </p>
+    <script type="text/javascript">
+      var txt_in = document.getElementById("in");
+      var out = document.getElementById("out");
+      var p_stats = document.getElementById("stats");
+      var characters = ['⏺', '←', '↑', '→', '↓', '↖', '↗', '↘', '↙'];
+      var word_length = 2;
+      var goal = " ";
+      var start_time = null;
+      var stats = {};
+
+      function randomElement(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      function input(e) {
+        var solved = txt_in.value.endsWith(goal);
+        if (start_time != null) {
+          var time_delay = new Date() - start_time;
+          s = stats[goal]
+          if (s == undefined) {
+            s = []
+          }
+          if (!solved) {
+            time_delay = -time_delay;
+          }
+          s.push(time_delay);
+          stats[goal] = s;
+          p_stats.innerText = (new Date()).toISOString() + "\n" + JSON.stringify(stats);
+        }
+        if (solved) {
+          goal = "";
+          for (var i = 0; i < word_length; i++) {
+            goal += randomElement(characters);
+          }
+          out.innerText = goal;
+          txt_in.value = "";
+        }
+        start_time = new Date();
+      }
+      txt_in.addEventListener("input", input);
+    </script>
+  </body>
+</html>
