@@ -32,6 +32,7 @@
       <p>
     </div>
     <input type="text" id="in"/>
+    <input type="button" onclick="analyze()" value="analyze"/>
     <p id="stats">
       start typing to get stats
     </p>
@@ -45,9 +46,13 @@
       var word_length = 2;
       var goal = " ";
       var start_time = null;
-      var stats = {"goals":[], "input":"", "transitions": {}, "timings": {}};
+      var stats = {"analysis": {"regression_factors": null, "accuracy": {}}, "goals":[], "input":"", "transitions": {}, "timings": {}};
       var streak = 0;
+      var MAX_KEYPRESS_DELAY = 2000;
 
+      function coords(pos) {
+        return [pos % 3 - 1, 1 - Math.floor(pos / 3)];
+      }
       function draw(word) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         part = (canvas.width - 1) / 5;
@@ -64,10 +69,6 @@
           ctx.moveTo(part, x);
           ctx.lineTo(canvas.width - part, x);
           ctx.stroke();
-        }
-        function coords(pos) {
-          console.log(pos);
-          return [pos % 3 - 1, 1 - Math.floor(pos / 3)];
         }
         var start = coords(characters.indexOf(word[0]));
         var end = coords(characters.indexOf(word[1]));
@@ -86,6 +87,90 @@
         ctx.moveTo(start[0], start[1]);
         ctx.lineTo(end[0], end[1]);
         ctx.stroke();
+      }
+
+      function cos_similarity(a, b) {
+        a_len = Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+        b_len = Math.sqrt(b[0] * b[0] + b[1] * b[1]);
+        if (a_len == 0 || b_len == 0) {
+          return 1;
+        }
+        return (a[0] * b[0] + a[1] * b[1]) /  (a_len * b_len);
+      }
+
+      function analyze() {
+      /*
+        analysis:
+          - threshold for maximum time (prob. got distracted if too high)
+          - tap vs swipe
+          - movement to get to goal's main key
+          - angle between incoming travel and outgoing swipe (multiplied by movement to get to goal's main key (and another factor)?)
+
+        per-key:
+          - accuracy
+        */
+        try {
+          X = []
+          y = []
+          for (var i in stats["transitions"]) {
+            var times = stats["transitions"][i];
+            var words = i.split(",");
+            if (words[0] == ' ') continue;
+            var prev_main = coords(characters.indexOf(words[0][0]));
+            var prev_secondary = coords(characters.indexOf(words[0][1]));
+            var prev_end = [prev_main[0] + prev_secondary[0], prev_main[1] + prev_secondary[1]];
+            var curr_main = coords(characters.indexOf(words[1][0]));
+            var curr_secondary = coords(characters.indexOf(words[1][1]));
+            var curr_end = [curr_main[0] + curr_secondary[0], curr_main[1] + curr_secondary[1]];
+            console.log(i, times, prev_end, curr_main, curr_end);
+            x = []
+
+            // movement to get to goal's main key
+            x.push(Math.sqrt(Math.pow(curr_main[0] - prev_end[0], 2) + Math.pow(curr_main[1] - prev_end[1], 2)));
+
+            // tap vs swipe
+            x.push(0 + (characters.indexOf(words[1][1]) == 4));
+
+            // angle similarity between incoming travel and outgoing swipe
+            // sim =  sum([a * b for a, b in zip(v_a, v_b)]) / (dist((0,0), v_a) * (dist((0,0), v_b)))
+            // al1 = 1 - cos_similarity(delta(dests[0], coords[1][0]), delta(coords[1][0], dests[1]))
+            x.push(1 - cos_similarity([curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]], curr_secondary));
+
+            for (var j in times) {
+              if (j > MAX_KEYPRESS_DELAY) continue; // test subject was probably distracted.
+              X.push(x);
+              y.push(times[j]);
+            }
+          }
+          console.log(X);
+          console.log(y);
+          var reg = multipleLinearRegression(X, y);
+          console.log(reg);
+
+          stats["analysis"]["regression_factors"] = reg;
+        } catch (error) {
+          console.log(error);
+          alert(error);
+        }
+
+        for (var i in stats["timings"]) {
+          var timings = stats["timings"][i];
+          console.log(i, stats["timings"][i]);
+          var successes = 0;
+          var total = 0;
+          for (var j in timings) {
+            if (Math.abs(timings[j] > MAX_KEYPRESS_DELAY)) continue; // test subject was probably distracted.
+            total++;
+            if (timings[j] >= 0) {
+              successes++;
+            }
+          }
+          if (total > 0) {
+            stats["analysis"]["accuracy"][i] = successes / total;
+          }
+        }
+        
+        p_stats.innerText = (new Date()).toISOString() + "\n" + JSON.stringify(stats);
       }
 
       function randomElement(array) {
@@ -118,12 +203,12 @@
             s.push(time_delay);
             stats["transitions"][[goal_old, goal]] = s;
           }
+          stats["input"] += txt_in.value;
           goal_old = goal;
           goal = "";
           for (var i = 0; i < word_length; i++) {
             goal += randomElement(characters);
           }
-          stats["input"] += txt_in.value;
           stats["goals"].push(goal);
           out.innerText = goal;
           draw(goal);
@@ -135,6 +220,71 @@
         start_time = new Date();
       }
       txt_in.addEventListener("input", input);
+
+// https://ubcmath.github.io/MATH307/orthogonality/least_squares.html
+// https://javascripttricks.com/multiple-linear-regression-in-javascript-a-step-by-step-guide-5c9688cf30d
+function transpose(matrix) {
+  return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+}
+
+function multiply(matrixA, matrixB) {
+  const result = Array(matrixA.length).fill(0).map(() => Array(matrixB[0].length).fill(0));
+  
+  for (let i = 0; i < matrixA.length; i++) {
+    for (let j = 0; j < matrixB[0].length; j++) {
+      for (let k = 0; k < matrixA[0].length; k++) {
+        result[i][j] += matrixA[i][k] * matrixB[k][j];
+      }
+    }
+  }
+  
+  return result;
+}
+
+function inverse(matrix) {
+  const size = matrix.length;
+  const augmentedMatrix = matrix.map((row, rowIndex) => [...row, ...Array(size).fill(0).map((_, colIndex) => rowIndex === colIndex ? 1 : 0)]);
+
+  for (let i = 0; i < size; i++) {
+    let maxElementIndex = i;
+    for (let j = i + 1; j < size; j++) {
+      if (Math.abs(augmentedMatrix[j][i]) > Math.abs(augmentedMatrix[maxElementIndex][i])) {
+        maxElementIndex = j;
+      }
+    }
+
+    if (augmentedMatrix[maxElementIndex][i] === 0) {
+      throw new Error("Matrix is singular and cannot be inverted");
+    }
+
+    [augmentedMatrix[i], augmentedMatrix[maxElementIndex]] = [augmentedMatrix[maxElementIndex], augmentedMatrix[i]];
+
+    for (let j = i + 1; j < size * 2; j++) {
+      augmentedMatrix[i][j] /= augmentedMatrix[i][i];
+    }
+
+    for (let j = 0; j < size; j++) {
+      if (j !== i) {
+        const factor = augmentedMatrix[j][i];
+        for (let k = i; k < size * 2; k++) {
+          augmentedMatrix[j][k] -= factor * augmentedMatrix[i][k];
+        }
+      }
+    }
+  }
+
+  return augmentedMatrix.map(row => row.slice(size));
+}
+
+function multipleLinearRegression(X, y) {
+  const XT = transpose(X);
+  const XT_X = multiply(XT, X);
+  const XT_X_inv = inverse(XT_X);
+  const XT_y = multiply(XT, y);
+  const beta = multiply(XT_X_inv, XT_y);
+
+  return beta;
+}
     </script>
   </body>
 </html>
