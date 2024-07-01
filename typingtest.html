@@ -36,6 +36,8 @@
     <p id="stats">
       start typing to get stats
     </p>
+    <p>regression factors: general delay, distance to next key, swipe instead of tap, angle dissimilarity
+    </p>
     <script type="text/javascript">
       var txt_in = document.getElementById("in");
       var out = document.getElementById("out");
@@ -122,7 +124,7 @@
             x.push(Math.sqrt(Math.pow(curr_main[0] - prev_end[0], 2) + Math.pow(curr_main[1] - prev_end[1], 2)));
 
             // tap vs swipe
-            x.push(0 + (characters.indexOf(words[1][1]) == 4));
+            x.push(0 + (characters.indexOf(words[1][1]) != 4));
 
             // angle dissimilarity between incoming travel and outgoing swipe
             x.push(1 - cos_similarity([curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]], curr_secondary));
