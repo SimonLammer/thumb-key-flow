@@ -45,7 +45,8 @@
       var word_length = 2;
       var goal = " ";
       var start_time = null;
-      var stats = {"goals":[], "input":""};
+      var stats = {"goals":[], "input":"", "transitions": {}, "timings": {}};
+      var streak = 0;
 
       function draw(word) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -76,10 +77,8 @@
         function canvasCoords(coord) {
           return [canvas.width / 2 + coord[0] * part, canvas.height / 2 - coord[1] * part];
         }
-        console.log(end);
         start = canvasCoords(start);
         end = canvasCoords(end);
-        console.log(start, end);
         ctx.beginPath();
         ctx.arc(start[0], start[1], part / 4, 0, 2 * Math.PI);
         ctx.fill();
@@ -93,11 +92,13 @@
         return array[Math.floor(Math.random() * array.length)];
       }
 
+      var goal_old = "";
       function input(e) {
+        console.log(txt_in.value);
         var solved = txt_in.value.endsWith(goal);
         if (start_time != null) {
           var time_delay = new Date() - start_time;
-          s = stats[goal];
+          s = stats["timings"][goal];
           if (s == undefined) {
             s = [];
           }
@@ -105,9 +106,19 @@
             time_delay = -time_delay;
           }
           s.push(time_delay);
-          stats[goal] = s;
+          stats["timings"][goal] = s;
         }
         if (solved) {
+          streak++;
+          if (streak > 1) {
+            var s = stats["transitions"][[goal_old, goal]];
+            if (s == undefined) {
+              s = [];
+            }
+            s.push(time_delay);
+            stats["transitions"][[goal_old, goal]] = s;
+          }
+          goal_old = goal;
           goal = "";
           for (var i = 0; i < word_length; i++) {
             goal += randomElement(characters);
@@ -117,6 +128,8 @@
           out.innerText = goal;
           draw(goal);
           txt_in.value = "";
+        } else {
+          streak = 0;
         }
         p_stats.innerText = (new Date()).toISOString() + "\n" + JSON.stringify(stats);
         start_time = new Date();
