@@ -204,8 +204,10 @@
           }
           stats["input"] += txt_in.value;
           goal_old = goal;
-          goal = "";
-          for (var i = 0; i < word_length; i++) {
+          goal = randomElement(characters);
+          if (Math.random() < 0.07) {
+            goal += characters[4];
+          } else {
             goal += randomElement(characters);
           }
           stats["goals"].push(goal);
