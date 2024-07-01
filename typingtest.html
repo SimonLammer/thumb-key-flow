@@ -72,7 +72,7 @@
         }
         var start = coords(characters.indexOf(word[0]));
         var end = coords(characters.indexOf(word[1]));
-        console.log(start, end);
+        // console.log(start, end);
         end[0] += start[0];
         end[1] += start[1];
         function canvasCoords(coord) {
@@ -99,16 +99,6 @@
       }
 
       function analyze() {
-      /*
-        analysis:
-          - threshold for maximum time (prob. got distracted if too high)
-          - tap vs swipe
-          - movement to get to goal's main key
-          - angle between incoming travel and outgoing swipe (multiplied by movement to get to goal's main key (and another factor)?)
-
-        per-key:
-          - accuracy
-        */
         try {
           X = []
           y = []
@@ -122,8 +112,11 @@
             var curr_main = coords(characters.indexOf(words[1][0]));
             var curr_secondary = coords(characters.indexOf(words[1][1]));
             var curr_end = [curr_main[0] + curr_secondary[0], curr_main[1] + curr_secondary[1]];
-            console.log(i, times, prev_end, curr_main, curr_end);
+            // console.log(i, times, prev_end, curr_main, curr_end);
             x = []
+
+            // general latency
+            x.push(1);
 
             // movement to get to goal's main key
             x.push(Math.sqrt(Math.pow(curr_main[0] - prev_end[0], 2) + Math.pow(curr_main[1] - prev_end[1], 2)));
@@ -131,15 +124,13 @@
             // tap vs swipe
             x.push(0 + (characters.indexOf(words[1][1]) == 4));
 
-            // angle similarity between incoming travel and outgoing swipe
-            // sim =  sum([a * b for a, b in zip(v_a, v_b)]) / (dist((0,0), v_a) * (dist((0,0), v_b)))
-            // al1 = 1 - cos_similarity(delta(dests[0], coords[1][0]), delta(coords[1][0], dests[1]))
+            // angle dissimilarity between incoming travel and outgoing swipe
             x.push(1 - cos_similarity([curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]], curr_secondary));
 
             for (var j in times) {
               if (j > MAX_KEYPRESS_DELAY) continue; // test subject was probably distracted.
               X.push(x);
-              y.push(times[j]);
+              y.push([times[j]]);
             }
           }
           console.log(X);
@@ -155,7 +146,7 @@
 
         for (var i in stats["timings"]) {
           var timings = stats["timings"][i];
-          console.log(i, stats["timings"][i]);
+          // console.log(i, stats["timings"][i]);
           var successes = 0;
           var total = 0;
           for (var j in timings) {
@@ -179,7 +170,7 @@
 
       var goal_old = "";
       function input(e) {
-        console.log(txt_in.value);
+        // console.log(txt_in.value);
         var solved = txt_in.value.endsWith(goal);
         if (start_time != null) {
           var time_delay = new Date() - start_time;
