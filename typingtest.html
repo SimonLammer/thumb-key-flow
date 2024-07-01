@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <!-- Please do not look at this code, it is truly terrible (but gets the job done) -->
+<!-- TODO: colorize secondary keys based on accuracy -->
+<!-- TODO: preview next goal -->
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,7 +38,7 @@
     <p id="stats">
       start typing to get stats
     </p>
-    <p>regression factors: general delay, distance to next key, swipe instead of tap, angle dissimilarity
+    <p>regression factors: general delay, distance to next key, swipe, tap, angle similarity (prev_secondary, travel), angle similarity (travel, curr_secondary), angle similarity (prev_secondary, curr_secondary)
     </p>
     <script type="text/javascript">
       var txt_in = document.getElementById("in");
@@ -124,10 +126,14 @@
             x.push(Math.sqrt(Math.pow(curr_main[0] - prev_end[0], 2) + Math.pow(curr_main[1] - prev_end[1], 2)));
 
             // tap vs swipe
-            x.push(0 + (characters.indexOf(words[1][1]) != 4));
+            var swipe = characters.indexOf(words[1][1]) != 4;
+            x.push(0 + swipe);
+            x.push(0 + (!swipe));
 
-            // angle dissimilarity between incoming travel and outgoing swipe
-            x.push(1 - cos_similarity([curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]], curr_secondary));
+            // angle similarity between incoming travel and outgoing swipe
+            x.push(1 + cos_similarity(prev_secondary, [curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]]));
+            x.push(1 + cos_similarity([curr_main[0] - prev_end[0], curr_main[1] - prev_end[1]], curr_secondary));
+            x.push(1 + cos_similarity(prev_secondary, curr_secondary));
 
             for (var j in times) {
               if (j > MAX_KEYPRESS_DELAY) continue; // test subject was probably distracted.
